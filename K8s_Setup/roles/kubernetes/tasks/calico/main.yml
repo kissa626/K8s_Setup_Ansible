@@ -1,0 +1,45 @@
+---
+- name: Apply Calico manifest
+  ansible.builtin.command:
+    cmd: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/tigera-operator.yaml --server-side
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Download custom-resources.yaml
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/custom-resources.yaml
+    dest: /tmp/custom-resources.yaml
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+    mode: '0755'
+
+- name: Ensure the custom-resources.yaml file exists
+  ansible.builtin.stat:
+    path: /tmp/custom-resources.yaml
+  register: custom_resources_stat
+
+- name: Update spec.calicoNetwork.ipPools.cidr to match pod-network-cidr
+  ansible.builtin.replace:
+    path: /tmp/custom-resources.yaml
+    regexp: '^(.*cidr:).*'
+    replace: '\1 {{ pod_network_cidr }}'
+  when: custom_resources_stat.stat.exists
+
+- name: Append API server block to custom-resources.yaml
+  ansible.builtin.blockinfile:
+    path: /tmp/custom-resources.yaml
+    marker: ""
+    block: |
+      ---
+      apiVersion: operator.tigera.io/v1
+      kind: APIServer
+      metadata:
+        name: default
+      spec: {}
+
+- name: Apply the custom-resources.yaml configuration
+  ansible.builtin.command:
+    cmd: kubectl apply -f /tmp/custom-resources.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false

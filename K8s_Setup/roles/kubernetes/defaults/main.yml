@@ -1,0 +1,9 @@
+kubernetes_version: 1.31.1
+kubeadm_version: 1.31.1-1.1
+kubelet_version: 1.31.1-1.1
+kubectl_version: 1.31.1-1.1
+pod_network_cidr: 10.1.0.0/22
+control_plane_endpoint_ip: 10.0.1.10
+components_namespace: kube-system
+calico_namespace: tigera-operator
+calico_version: v3.29.0

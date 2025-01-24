@@ -1,0 +1,20 @@
+---
+- name: Disable swap
+  ansible.builtin.command:
+    cmd: swapoff -a
+
+- name: Comment out swap entries in /etc/fstab to disable permanently
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^([^#]*\s+swap\s+.*)$'
+    line: '# \1'
+    state: present
+    backrefs: true
+
+- name: Verify that swap is disabled
+  ansible.builtin.command: |
+    set -o pipefail
+    free -h | grep -i swap
+  register: swap_check
+  changed_when: false
+  failed_when: swap_check.stdout != ""

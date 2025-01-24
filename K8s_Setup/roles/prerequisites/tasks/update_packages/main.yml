@@ -1,0 +1,12 @@
+---
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    force_apt_get: true
+
+- name: Wait for updates
+  become: true
+  ansible.builtin.shell: while sudo fuser /var/lib/dpkg/{{ item }} >/dev/null 2>&1; do sleep 1; done;
+  with_items:
+    - lock
+    - lock-frontend

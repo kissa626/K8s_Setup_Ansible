@@ -1,0 +1,65 @@
+---
+- name: Install Kubernetes Packages
+  ansible.builtin.apt:
+    name:
+      - kubeadm={{ kubeadm_version }}
+      - kubelet={{ kubelet_version }}
+    state: present
+    force: true
+    install_recommends: false
+  retries: 3
+  delay: 3
+  register: apt_install_result
+  until: apt_install_result is succeeded
+
+- name: Prevent future update of Kubernetes packages
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  with_items:
+    - kubeadm
+    - kubelet
+
+- name: Install kubectl package
+  ansible.builtin.apt:
+    name:
+      - kubectl={{ kubeadm_version }}
+    state: present
+    force: true
+    install_recommends: false
+  retries: 3
+  delay: 3
+  register: apt_install_result
+  until: apt_install_result is succeeded
+  when: inventory_hostname in groups['masters']
+
+- name: Prevent future update of kubectl package
+  ansible.builtin.dpkg_selections:
+    name: kubectl
+    selection: hold
+  when: inventory_hostname in groups['masters']
+
+- name: Load kernel module as boot time
+  ansible.builtin.copy:
+    dest: "/etc/modules-load.d/k8s.conf"
+    content: |
+      overlay
+      br_netfilter
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+    mode: '0755'
+
+- name: Load kernel module
+  community.general.modprobe:
+    name: br_netfilter
+
+- name: Set kernel modules
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: true
+    reload: true
+  with_items:
+    - {name: 'net.ipv4.ip_forward', value: '1'}
+    - {name: 'net.bridge.bridge-nf-call-iptables', value: '1'}
+    - {name: 'net.bridge.bridge-nf-call-ip6tables', value: '1'}

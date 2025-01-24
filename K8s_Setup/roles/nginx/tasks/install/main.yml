@@ -1,0 +1,38 @@
+---
+- name: Create ingress-nginx namespace
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: ingress-nginx
+    kubeconfig: "~{{ ansible_ssh_user }}/.kube/config"
+
+- name: Add nginx-ingress Helm repository
+  kubernetes.core.helm_repository:
+    name: ingress-nginx
+    repo_url: https://kubernetes.github.io/ingress-nginx
+    force_update: true
+
+- name: Install NGINX Ingress using Helm
+  kubernetes.core.helm:
+    name: nginx-ingress
+    chart_ref: ingress-nginx/ingress-nginx
+    release_namespace: ingress-nginx
+    kubeconfig: "~{{ ansible_ssh_user }}/.kube/config"
+    values:
+      controller:
+        service:
+          type: NodePort
+          nodePorts:
+            http: 30080
+            https: 30443
+
+- name: Wait for pods to be ready
+  kubernetes.core.k8s_info:
+    kubeconfig: "~{{ ansible_ssh_user }}/.kube/config"
+    api_version: v1
+    kind: Pod
+    wait: true
+    namespace: ingress-nginx
+    field_selectors:
+      - status.phase=Running
+  when: inventory_hostname in groups['masters']

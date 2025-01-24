@@ -1,0 +1,43 @@
+---
+- name: Initialize Kubernetes control plane
+  ansible.builtin.command: |
+    kubeadm init \
+      --control-plane-endpoint {{ control_plane_endpoint_ip }}:6443 \
+      --pod-network-cidr={{ pod_network_cidr }}
+  register: init_cluster
+  until: init_cluster.stdout.find("Your Kubernetes control-plane has initialized successfully!") != -1
+  retries: 2
+  delay: 300
+
+- name: Create .kube directory for the user
+  ansible.builtin.file:
+    path: "/home/{{ ansible_ssh_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+    mode: '0755'
+
+- name: Copy Kubernetes admin.conf to user/.kube/config
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ ansible_ssh_user }}/.kube/config"
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+    mode: '0755'
+    remote_src: true
+
+- name: Append kubectl completion to .bashrc
+  ansible.builtin.lineinfile:
+    path: "/home/{{ ansible_ssh_user }}/.bashrc"
+    line: 'source <(kubectl completion bash)'
+    state: present
+    create: true
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+    mode: '0755'
+
+- name: Source kubectl completion immediately
+  # shell is used instead of command, reason: executable not supported with command module
+  ansible.builtin.shell: "source <(kubectl completion bash)"
+  args:
+    executable: /bin/bash

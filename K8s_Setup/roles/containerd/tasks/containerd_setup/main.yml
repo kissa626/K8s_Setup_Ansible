@@ -1,0 +1,61 @@
+---
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    force_apt_get: true
+
+- name: Wait for updates
+  become: true
+  ansible.builtin.shell: while sudo fuser /var/lib/dpkg/{{ item }} >/dev/null 2>&1; do sleep 1; done;
+  with_items:
+    - lock
+    - lock-frontend
+
+- name: Add Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    owner: _apt
+    group: nogroup
+    mode: "0600"
+
+- name: Add Docker stable repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ ansible_lsb.id|lower }} {{ ansible_lsb.codename }} stable"
+    update_cache: true
+    filename: docker
+
+- name: Install containerd
+  ansible.builtin.apt:
+    name: containerd.io
+
+- name: Create /etc/containerd directory
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    owner: "{{ ansible_ssh_user }}"
+    group: "{{ ansible_ssh_user }}"
+    mode: '0755'
+
+- name: Get defaults from containerd
+  ansible.builtin.command: containerd config default
+  changed_when: false
+  register: containerd_config_default
+
+- name: Create containerd/config.toml and insert default config
+  ansible.builtin.copy:
+    dest: /etc/containerd/config.toml
+    content: "{{ containerd_config_default.stdout }}"
+    mode: '0755'
+  changed_when: false
+
+- name: Set SystemdCgroup parameter to true
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+  notify:
+    - Restart containerd
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

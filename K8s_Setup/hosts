@@ -1,0 +1,19 @@
+[all]
+k8s-control-plane ansible_ssh_host=10.0.1.10
+k8s-worker01 ansible_ssh_host=10.0.1.11
+k8s-worker02 ansible_ssh_host=10.0.1.12
+
+[masters]
+k8s-control-plane
+
+[workers]
+k8s-worker01
+k8s-worker02
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_connection=ssh
+ansible_ssh_user=k8s
+ansible_ssh_pass=1
+ansible_sudo_pass=1
+ansible_ssh_private_key_file=/Users/k8s/.ssh/id.rsa

@@ -1,0 +1,27 @@
+---
+- name: Copy Ansible user's public key to VM
+  ansible.posix.authorized_key:
+    user: "{{ ansible_ssh_user }}"
+    state: present
+    key: "{{ lookup('file', 'id_rsa.pub') }}"
+  register: result_ssh
+
+- name: Allow Ansible user to have passwordless sudo
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/{{ ansible_ssh_user }}
+    line: "{{ ansible_ssh_user }} ALL=(ALL) NOPASSWD: ALL"
+    create: true
+    mode: '0664'
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Disable root login
+  ansible.builtin.lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^PermitRootLogin'
+    line: 'PermitRootLogin no'
+    state: present
+    backup: true
+  notify: Restart-ssh
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

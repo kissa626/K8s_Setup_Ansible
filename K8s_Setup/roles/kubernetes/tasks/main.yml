@@ -1,0 +1,21 @@
+---
+- name: Install Helm
+  ansible.builtin.include_tasks: helm/main.yml
+  when: inventory_hostname in groups['masters']
+
+- name: Setup dependencies for kubernetes install
+  ansible.builtin.include_tasks: dependencies/main.yml
+
+- name: Install kubernetes packages
+  ansible.builtin.include_tasks: install/main.yml
+
+- name: Swapoff
+  ansible.builtin.include_tasks: swapoff/main.yml
+
+- name: Setup kubernetes
+  ansible.builtin.include_tasks: setup/main.yml
+  when: inventory_hostname in groups['masters']
+
+- name: Setup Calico APIServer
+  ansible.builtin.include_tasks: calico/main.yml
+  when: inventory_hostname in groups['masters']

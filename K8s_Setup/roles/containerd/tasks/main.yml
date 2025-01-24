@@ -1,0 +1,6 @@
+---
+- name: Setup dependencies for installations
+  ansible.builtin.include_tasks: setup_dependencies/main.yml
+
+- name: Setup Containerd
+  ansible.builtin.include_tasks: containerd_setup/main.yml

@@ -1,0 +1,6 @@
+---
+- name: Run cluster setup
+  ansible.builtin.import_playbook: setup_cluster.yml
+
+- name: Run application setup
+  ansible.builtin.import_playbook: setup_application.yml

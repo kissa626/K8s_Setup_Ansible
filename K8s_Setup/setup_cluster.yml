@@ -1,0 +1,16 @@
+---
+- name: Gather facts
+  hosts: all
+  become: true
+  tasks:
+    - ansible.builtin.setup:
+
+- name: Setup kubernetes cluster on empty VMs
+  hosts: all
+  become: true
+  roles:
+    - prerequisites
+    - containerd
+    - kubernetes
+    - join
+    - haproxy

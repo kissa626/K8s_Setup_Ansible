@@ -1,0 +1,6 @@
+---
+- name: Update APT packages
+  ansible.builtin.include_tasks: update_packages/main.yml
+
+- name: Setup passwordless ssh for k8s
+  ansible.builtin.include_tasks: set_k8s_ssh/main.yml

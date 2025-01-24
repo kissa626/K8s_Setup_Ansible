@@ -1,0 +1,7 @@
+---
+- name: Setup application on cluster
+  hosts: all
+  become: true
+  roles:
+    - nginx
+    - longhorn
